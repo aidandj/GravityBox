@@ -15,6 +15,9 @@
 
 package com.ceco.kitkat.gravitybox;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import android.content.BroadcastReceiver;
@@ -22,11 +25,13 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.provider.Settings;
+import android.util.Log;
 
 public class WifiManagerWrapper {
     public static final String WIFI_AP_STATE_CHANGED_ACTION = "android.net.wifi.WIFI_AP_STATE_CHANGED";
@@ -45,11 +50,16 @@ public class WifiManagerWrapper {
     public static final int WIFI_AP_STATE_ENABLED = 13;
     public static final int WIFI_AP_STATE_FAILED = 14;
 
+    public static final String PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS = "trusted_networks_array";
+
     private Context mContext;
     private WifiManager mWifiManager;
     private WifiApStateChangeListener mApStateChangeListener;
     private BroadcastReceiver mApStateChangeReceiver;
     private WifiStateChangeListener mWifiStateChangeListener;
+    private BroadcastReceiver mWifiStateChangeReceiver;
+    private SharedPreferences mPrefs;
+    private SharedPreferences.Editor mPrefsEditor;
 
     public interface WifiApStateChangeListener {
         void onWifiApStateChanged(int wifiApState);
@@ -63,10 +73,15 @@ public class WifiManagerWrapper {
         mContext = context;
         mWifiManager = (WifiManager) mContext.getSystemService(Context.WIFI_SERVICE);
         setWifiApStateChangeListener(listener);
+        mWifiManager = (WifiManager) mContext.getSystemService(Context.WIFI_SERVICE);
+        registerWifiStateChangeReceiver();
+        final String prefsName = mContext.getPackageName() + "_preferences";
+        mPrefs = mContext.getSharedPreferences(prefsName, Context.MODE_WORLD_READABLE);
     }
 
     public WifiManagerWrapper(Context context) {
         this(context, null);
+        mContext = context;
     }
 
     public void setWifiApStateChangeListener(WifiApStateChangeListener listener) {
@@ -77,10 +92,50 @@ public class WifiManagerWrapper {
     }
 
     public void setWifiStateChangeListener(WifiStateChangeListener listener) {
-        if (listener != null) {
-            mWifiStateChangeListener = listener;
-        }
+        if (listener == null) return;
+        
+        mWifiStateChangeListener = listener;
+        registerWifiStateChangeReceiver();
     }
+
+    private void registerWifiStateChangeReceiver() {
+            if (mContext == null || mWifiStateChangeReceiver != null)
+                return;
+
+            mWifiStateChangeReceiver = new BroadcastReceiver() {
+
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    Log.d("GravityBox", "OnReceive");
+                	if (intent.getAction().equals(WifiManager.NETWORK_STATE_CHANGED_ACTION)) {
+                		Log.d("GravityBox", "after intent");
+                		try {
+                        WifiInfo network = intent.getParcelableExtra(WifiManager.EXTRA_WIFI_INFO);
+                        Set<String> networks = mPrefs.getStringSet(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS, new HashSet<String>());
+                        Log.d("GravityBox", "trusted networks: " + networks);
+                        if((network != null) && networks.contains(network.getSSID())) {
+                            Log.d("GravityBox", "In a trusted Network");
+                            mPrefsEditor = mPrefs.edit();
+                            mPrefsEditor.putBoolean("trusted_wifi", true);
+                            mPrefsEditor.apply();
+                        } else {
+                            Log.d("GravityBox", "Not in trusted wifi");
+                        	mPrefsEditor = mPrefs.edit();
+                            mPrefsEditor.putBoolean("trusted_wifi", false);
+                            mPrefsEditor.apply();
+                        }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    
+                }
+            };
+
+            IntentFilter intentFilter = new IntentFilter();
+            intentFilter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
+            mContext.registerReceiver(mWifiStateChangeReceiver, intentFilter);
+        }
 
     private void registerApStateChangeReceiver() {
         if (mContext == null || mApStateChangeReceiver != null)

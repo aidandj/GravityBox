@@ -84,7 +84,7 @@ public class ModLockscreen {
     private static final String CLASS_KG_UPDATE_MONITOR_BATTERY_STATUS = 
             CLASS_PATH + ".KeyguardUpdateMonitor.BatteryStatus";
     private static final String CLASS_KG_WIDGET_PAGER = CLASS_PATH + ".KeyguardWidgetPager";
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
     private static final boolean DEBUG_ARC = false;
 
     private static final int STATUSBAR_DISABLE_RECENT = 0x01000000;
@@ -278,10 +278,31 @@ public class ModLockscreen {
             XposedHelpers.findAndHookMethod(kgHostViewClass, "onScreenTurnedOn", new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(final MethodHookParam param) throws Throwable {
+                	mPrefs.reload();
+                	if (DEBUG) log("OnScreenTurnedOn");
+                    if (mPrefs.getBoolean(
+                            GravityBoxSettings.PREF_KEY_LOCKSCREEN_TRUSTED_WIFI, false)) {
+                        if(mPrefs.getBoolean("trusted_wifi", false)){
+                            if (DEBUG) log("Trusted wifi yes");
+                            final Object callback = 
+                                XposedHelpers.getObjectField(param.thisObject, "mCallback");
+                        XposedHelpers.callMethod(callback, "reportSuccessfulUnlockAttempt");
+                        XposedHelpers.callMethod(callback, "dismiss", true);
+                        if (DEBUG) log("Lockscreen Dismissed");
+                        }
+                    } else {
+                        if (DEBUG) log("Trusted wifi off");
+                    }
                     Object slidingChallenge = XposedHelpers.getObjectField(
                             param.thisObject, "mSlidingChallengeLayout");
                     minimizeChallengeIfDesired(slidingChallenge);
                 }
+//                @Override
+//                protected void afterHookedMethod(final MethodHookParam param) throws Throwable {
+//                    Object slidingChallenge = XposedHelpers.getObjectField(
+//                            param.thisObject, "mSlidingChallengeLayout");
+//                    minimizeChallengeIfDesired(slidingChallenge);
+//                }
             });
 
             XposedHelpers.findAndHookMethod(kgSelectorViewClass, "onFinishInflate", new XC_MethodHook() {

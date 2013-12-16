@@ -60,6 +60,7 @@ import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.res.Configuration;
 import android.content.res.Resources;
@@ -169,6 +170,13 @@ public class GravityBoxSettings extends Activity implements GravityBoxResultRece
     public static final String LOCKSCREEN_BG_DEFAULT = "default";
     public static final String LOCKSCREEN_BG_COLOR = "color";
     public static final String LOCKSCREEN_BG_IMAGE = "image";
+
+    public static final String PREF_CAT_KEY_LOCKSCREEN_TRUSTED_WIFI = "pref_cat_lockscreen_trusted_wifi";
+    public static final String PREF_KEY_LOCKSCREEN_TRUSTED_WIFI = "pref_lockscreen_trusted_wifi";
+    public static final String PREF_LOCKSCREEN_TRUSTED_WIFI_SETTINGS = "pref_cat_lockscreen_trusted_wifi_settings";
+    public static final String PREF_LOCKSCREEN_TRUSTED_WIFI_SETTINGS_ADD = "pref_lockscreen_trusted_wifi_add";
+    public static final String PREF_LOCKSCREEN_TRUSTED_WIFI_SETTINGS_ADD_MANUAL = "pref_lockscreen_trusted_wifi_add_manual";
+    public static final String PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS = "trusted_networks_array";
 
     public static final String PREF_CAT_KEY_LOCKSCREEN_OTHER = "pref_cat_lockscreen_other";
     public static final String PREF_KEY_LOCKSCREEN_BATTERY_ARC = "pref_lockscreen_battery_arc";
@@ -689,6 +697,12 @@ public class GravityBoxSettings extends Activity implements GravityBoxResultRece
         private ListPreference mPrefLockscreenBg;
         private ColorPickerPreference mPrefLockscreenBgColor;
         private Preference mPrefLockscreenBgImage;
+        private PreferenceCategory mPrefCatLockscreenTW;
+        private SwitchPreference mPrefLockscreenTW;
+        private PreferenceScreen mPrefLockscreenTWsettings;
+        private Preference mPrefLockscreenTWadd;
+        private Preference mPrefLockscreenTWaddmanual;
+        private static WifiManagerWrapper mWifiManager;
         private File wallpaperImage;
         private File wallpaperTemporary;
         private File notifBgImagePortrait;
@@ -847,6 +861,17 @@ public class GravityBoxSettings extends Activity implements GravityBoxResultRece
                     (ColorPickerPreference) findPreference(PREF_KEY_LOCKSCREEN_BACKGROUND_COLOR);
             mPrefLockscreenBgImage = 
                     (Preference) findPreference(PREF_KEY_LOCKSCREEN_BACKGROUND_IMAGE);
+
+            mPrefLockscreenTW =
+                    (SwitchPreference) findPreference(PREF_KEY_LOCKSCREEN_TRUSTED_WIFI);
+            mPrefCatLockscreenTW = 
+                    (PreferenceCategory) findPreference(PREF_CAT_KEY_LOCKSCREEN_TRUSTED_WIFI);
+            mPrefLockscreenTWsettings = 
+                    (PreferenceScreen) findPreference(PREF_LOCKSCREEN_TRUSTED_WIFI_SETTINGS);
+            mPrefLockscreenTWadd =
+                    (Preference) findPreference(PREF_LOCKSCREEN_TRUSTED_WIFI_SETTINGS_ADD);
+            mPrefLockscreenTWaddmanual =
+                    (Preference) findPreference(PREF_LOCKSCREEN_TRUSTED_WIFI_SETTINGS_ADD_MANUAL);        
 
             wallpaperImage = new File(getActivity().getFilesDir() + "/lockwallpaper"); 
             wallpaperTemporary = new File(getActivity().getCacheDir() + "/lockwallpaper.tmp");
@@ -1192,6 +1217,13 @@ public class GravityBoxSettings extends Activity implements GravityBoxResultRece
                     mPrefCatLockscreenBg.addPreference(mPrefLockscreenBgColor);
                 } else if (option.equals(LOCKSCREEN_BG_IMAGE)) {
                     mPrefCatLockscreenBg.addPreference(mPrefLockscreenBgImage);
+                }
+            }
+
+            if (key == null || key.equals(PREF_KEY_LOCKSCREEN_TRUSTED_WIFI)) {
+                mPrefLockscreenTWsettings.setEnabled(false);
+                if(mPrefs.getBoolean(PREF_KEY_LOCKSCREEN_TRUSTED_WIFI, false)){
+                    mPrefLockscreenTWsettings.setEnabled(true);
                 }
             }
 
@@ -1772,6 +1804,12 @@ public class GravityBoxSettings extends Activity implements GravityBoxResultRece
             } else if (pref == mPrefLockscreenBgImage) {
                 setCustomLockscreenImage();
                 return true;
+            } else if (pref == mPrefLockscreenTWadd) {
+                addTW();
+                return true;
+            } else if (pref == mPrefLockscreenTWaddmanual) {
+                addTWmanual();
+                return true;
             } else if (pref == mPrefNotifImagePortrait) {
                 setCustomNotifBgPortrait();
                 return true;
@@ -1996,6 +2034,31 @@ public class GravityBoxSettings extends Activity implements GravityBoxResultRece
                         R.string.caller_unkown_photo_result_not_successful),
                         Toast.LENGTH_SHORT).show();
                 e.printStackTrace();
+            }
+        }
+
+        public void addTWmanual() {
+            SharedPreferences.Editor editor = mPrefs.edit();
+            editor.remove(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS);
+            editor.apply();
+            editor.putBoolean("trusted_wifi", false);
+            editor.apply();
+        }
+
+        public void addTW() {
+            mWifiManager = new WifiManagerWrapper(getActivity());
+            if(mWifiManager.getWifiSsid() != "<unknown ssid>") {
+            Set<String> networks = mPrefs.getStringSet(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS, new HashSet<String>());
+            HashSet<String> _networks = new HashSet<String>();
+            _networks.addAll(networks);
+            _networks.add(mWifiManager.getWifiSsid());
+            SharedPreferences.Editor editor = mPrefs.edit();
+            editor.remove(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS);
+            editor.apply();
+            editor.putStringSet(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS, _networks);
+            editor.apply();
+            editor.putBoolean("trusted_wifi", true);
+            editor.apply();
             }
         }
 
