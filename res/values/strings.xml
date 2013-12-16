@@ -162,6 +162,15 @@
     <string name="pref_lockscreen_maximize_widgets_title">Maximize widgets</string>
     <string name="pref_lockscreen_maximize_widgets_summary">When enabled, lockscreen widgets will be maximized by default</string>
 
+    <!--  Trusted Wifi Settings -->
+    <string name="pref_cat_lockscreen_trusted_wifi">Trusted WiFi Settings (BETA)</string>
+    <string name="pref_lockscreen_trusted_wifi_title">Enable Trusted WiFi</string>
+    <string name="pref_cat_lockscreen_trusted_wifi_settings_title">Trusted WiFi settings</string>
+    <string name="pref_lockscreen_trusted_wifi_summary">Disable unlock settings when connected to Trusted WiFi</string>
+    <string name="pref_lockscreen_trusted_wifi_add_title">Add current WiFi network to Trusted List</string>
+    <string name="pref_lockscreen_trusted_wifi_add_manual_title">Clear Trusted List</string>
+    
+    
     <!--  Power tweaks category -->
     <string name="pref_cat_power_title">Power tweaks</string>
     <string name="pref_cat_power_summary">Contains various power related tweaks</string>

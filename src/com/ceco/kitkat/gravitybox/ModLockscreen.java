@@ -21,6 +21,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
 
@@ -119,6 +120,9 @@ public class ModLockscreen {
     private static boolean mArcVisible;
     private static boolean mArcEnabled;
     private static View mGlowPadView;
+    
+    // Trusted Wifi
+    private static WifiManagerWrapper mWifiManager;
 
     private static void log(String message) {
         XposedBridge.log(TAG + ": " + message);
@@ -278,7 +282,22 @@ public class ModLockscreen {
             XposedHelpers.findAndHookMethod(kgHostViewClass, "onScreenTurnedOn", new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(final MethodHookParam param) throws Throwable {
-                    Object slidingChallenge = XposedHelpers.getObjectField(
+                	if (DEBUG) log("OnScreenTurnedOn");
+            		if (mPrefs.getBoolean(
+                            GravityBoxSettings.PREF_KEY_LOCKSCREEN_TRUSTED_WIFI, false)) {
+            			mWifiManager = new WifiManagerWrapper(mGbContext);
+            			if(mPrefs.getStringSet(GravityBoxSettings.PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS, new HashSet<String>()).contains(mWifiManager.getWifiSsid())){
+            				if (DEBUG) log("Trusted wifi yes");
+            				final Object callback = 
+                                XposedHelpers.getObjectField(param.thisObject, "mCallback");
+                		XposedHelpers.callMethod(callback, "reportSuccessfulUnlockAttempt");
+                        XposedHelpers.callMethod(callback, "dismiss", true);
+                        if (DEBUG) log("Lockscreen Dismissed");
+            			}
+                    } else {
+                    	if (DEBUG) log("Trusted wifi off");
+                    }
+                	Object slidingChallenge = XposedHelpers.getObjectField(
                             param.thisObject, "mSlidingChallengeLayout");
                     minimizeChallengeIfDesired(slidingChallenge);
                 }

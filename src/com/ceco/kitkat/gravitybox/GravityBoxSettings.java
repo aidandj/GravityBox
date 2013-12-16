@@ -169,6 +169,13 @@ public class GravityBoxSettings extends Activity implements GravityBoxResultRece
     public static final String LOCKSCREEN_BG_DEFAULT = "default";
     public static final String LOCKSCREEN_BG_COLOR = "color";
     public static final String LOCKSCREEN_BG_IMAGE = "image";
+    
+    public static final String PREF_CAT_KEY_LOCKSCREEN_TRUSTED_WIFI = "pref_cat_lockscreen_trusted_wifi";
+    public static final String PREF_KEY_LOCKSCREEN_TRUSTED_WIFI = "pref_lockscreen_trusted_wifi";
+    public static final String PREF_LOCKSCREEN_TRUSTED_WIFI_SETTINGS = "pref_cat_lockscreen_trusted_wifi_settings";
+    public static final String PREF_LOCKSCREEN_TRUSTED_WIFI_SETTINGS_ADD = "pref_lockscreen_trusted_wifi_add";
+    public static final String PREF_LOCKSCREEN_TRUSTED_WIFI_SETTINGS_ADD_MANUAL = "pref_lockscreen_trusted_wifi_add_manual";
+    public static final String PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS = "trusted_networks_array";
 
     public static final String PREF_CAT_KEY_LOCKSCREEN_OTHER = "pref_cat_lockscreen_other";
     public static final String PREF_KEY_LOCKSCREEN_BATTERY_ARC = "pref_lockscreen_battery_arc";
@@ -693,6 +700,12 @@ public class GravityBoxSettings extends Activity implements GravityBoxResultRece
         private File wallpaperTemporary;
         private File notifBgImagePortrait;
         private File notifBgImageLandscape;
+        private PreferenceCategory mPrefCatLockscreenTW;
+        private SwitchPreference mPrefLockscreenTW;
+        private PreferenceScreen mPrefLockscreenTWsettings;
+        private Preference mPrefLockscreenTWadd;
+        private Preference mPrefLockscreenTWaddmanual;
+        private static WifiManagerWrapper mWifiManager;
         private PreferenceScreen mPrefCatHwKeyActions;
         private PreferenceCategory mPrefCatHwKeyMenu;
         private ListPreference mPrefHwKeyMenuLongpress;
@@ -847,6 +860,17 @@ public class GravityBoxSettings extends Activity implements GravityBoxResultRece
                     (ColorPickerPreference) findPreference(PREF_KEY_LOCKSCREEN_BACKGROUND_COLOR);
             mPrefLockscreenBgImage = 
                     (Preference) findPreference(PREF_KEY_LOCKSCREEN_BACKGROUND_IMAGE);
+            
+            mPrefLockscreenTW =
+            		(SwitchPreference) findPreference(PREF_KEY_LOCKSCREEN_TRUSTED_WIFI);
+            mPrefCatLockscreenTW = 
+            		(PreferenceCategory) findPreference(PREF_CAT_KEY_LOCKSCREEN_TRUSTED_WIFI);
+            mPrefLockscreenTWsettings = 
+            		(PreferenceScreen) findPreference(PREF_LOCKSCREEN_TRUSTED_WIFI_SETTINGS);
+            mPrefLockscreenTWadd =
+            		(Preference) findPreference(PREF_LOCKSCREEN_TRUSTED_WIFI_SETTINGS_ADD);
+            mPrefLockscreenTWaddmanual =
+            		(Preference) findPreference(PREF_LOCKSCREEN_TRUSTED_WIFI_SETTINGS_ADD_MANUAL);
 
             wallpaperImage = new File(getActivity().getFilesDir() + "/lockwallpaper"); 
             wallpaperTemporary = new File(getActivity().getCacheDir() + "/lockwallpaper.tmp");
@@ -1193,6 +1217,13 @@ public class GravityBoxSettings extends Activity implements GravityBoxResultRece
                 } else if (option.equals(LOCKSCREEN_BG_IMAGE)) {
                     mPrefCatLockscreenBg.addPreference(mPrefLockscreenBgImage);
                 }
+            }
+            
+            if (key == null || key.equals(PREF_KEY_LOCKSCREEN_TRUSTED_WIFI)) {
+            	mPrefLockscreenTWsettings.setEnabled(false);
+            	if(mPrefs.getBoolean(PREF_KEY_LOCKSCREEN_TRUSTED_WIFI, false)){
+            		mPrefLockscreenTWsettings.setEnabled(true);
+            	}
             }
 
             if (key == null || key.equals(PREF_KEY_HWKEY_MENU_LONGPRESS)) {
@@ -1778,6 +1809,12 @@ public class GravityBoxSettings extends Activity implements GravityBoxResultRece
             } else if (pref == mPrefNotifImageLandscape) {
                 setCustomNotifBgLandscape();
                 return true;
+            } else if (pref == mPrefLockscreenTWadd) {
+            	addTW();
+            	return true;
+            } else if (pref == mPrefLockscreenTWaddmanual) {
+            	addTWmanual();
+            	return true;
             } else if (pref == mPrefGbThemeDark) {
                 File file = new File(getActivity().getFilesDir() + "/" + FILE_THEME_DARK_FLAG);
                 if (mPrefGbThemeDark.isChecked()) {
@@ -1847,6 +1884,32 @@ public class GravityBoxSettings extends Activity implements GravityBoxResultRece
             return super.onPreferenceTreeClick(prefScreen, pref);
         }
 
+        public void addTWmanual() {
+        	SharedPreferences.Editor editor = mPrefs.edit();
+    		editor.remove(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS);
+    		editor.commit();
+		}
+
+    	public void addTW() {
+    		mWifiManager = new WifiManagerWrapper(getActivity());
+    		if(mWifiManager.getWifiSsid() != "<unknown ssid>") {
+    		Set<String> networks = mPrefs.getStringSet(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS, new HashSet<String>());
+    		HashSet<String> _networks = new HashSet<String>();
+    		_networks.addAll(networks);
+    		
+    		
+    		Log.d("ADJ", "addTW1 stringSet: " + networks);
+    		
+    		_networks.add(mWifiManager.getWifiSsid());
+    		SharedPreferences.Editor editor = mPrefs.edit();
+    		editor.remove(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS);
+    		editor.commit();
+    		editor.putStringSet(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS, _networks);
+    		editor.commit();
+    		Log.d("ADJ", "addTW2 stringSet: " + networks);
+    		}
+    	}
+        
         @SuppressWarnings("deprecation")
         private void setCustomLockscreenImage() {
             Intent intent = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
