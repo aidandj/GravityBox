@@ -84,7 +84,7 @@ public class ModLockscreen {
     private static final String CLASS_KG_UPDATE_MONITOR_BATTERY_STATUS = 
             CLASS_PATH + ".KeyguardUpdateMonitor.BatteryStatus";
     private static final String CLASS_KG_WIDGET_PAGER = CLASS_PATH + ".KeyguardWidgetPager";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     private static final boolean DEBUG_ARC = false;
 
     private static final int STATUSBAR_DISABLE_RECENT = 0x01000000;

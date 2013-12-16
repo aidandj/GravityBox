@@ -106,13 +106,13 @@ public class WifiManagerWrapper {
 
                 @Override
                 public void onReceive(Context context, Intent intent) {
-                    Log.d("GravityBox", "OnReceive");
+//                    Log.d("GravityBox", "OnReceive");
                 	if (intent.getAction().equals(WifiManager.NETWORK_STATE_CHANGED_ACTION)) {
-                		Log.d("GravityBox", "after intent");
+//                		Log.d("GravityBox", "after intent");
                 		try {
                         WifiInfo network = intent.getParcelableExtra(WifiManager.EXTRA_WIFI_INFO);
-                        Set<String> networks = mPrefs.getStringSet(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS, new HashSet<String>());
-                        Log.d("GravityBox", "trusted networks: " + networks);
+//                        Set<String> networks = mPrefs.getStringSet(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS, new HashSet<String>());
+//                        Log.d("GravityBox", "trusted networks: " + networks);
                         if((network != null) && networks.contains(network.getSSID())) {
                             Log.d("GravityBox", "In a trusted Network");
                             mPrefsEditor = mPrefs.edit();
