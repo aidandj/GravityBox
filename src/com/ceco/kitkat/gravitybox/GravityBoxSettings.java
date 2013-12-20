@@ -34,6 +34,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.preference.CheckBoxPreference;
+import android.preference.EditTextPreference;
 import android.preference.ListPreference;
 import android.preference.MultiSelectListPreference;
 import android.preference.Preference;
@@ -47,6 +48,7 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.Display;
 import android.view.Window;
+import android.widget.EditText;
 import android.widget.Toast;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -176,6 +178,8 @@ public class GravityBoxSettings extends Activity implements GravityBoxResultRece
     public static final String PREF_LOCKSCREEN_TRUSTED_WIFI_SETTINGS_ADD = "pref_lockscreen_trusted_wifi_add";
     public static final String PREF_LOCKSCREEN_TRUSTED_WIFI_SETTINGS_ADD_MANUAL = "pref_lockscreen_trusted_wifi_add_manual";
     public static final String PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS = "trusted_networks_array";
+    public static final String PREF_LOCKSCREEN_TRUSTED_WIFI_MANAGE = "pref_lockscreen_trusted_wifi_manage";
+    public static final String PREF_LOCKSCREEN_TRUSTED_WIFI_CLEAR = "pref_lockscreen_trusted_wifi_clear";
 
     public static final String PREF_CAT_KEY_LOCKSCREEN_OTHER = "pref_cat_lockscreen_other";
     public static final String PREF_KEY_LOCKSCREEN_BATTERY_ARC = "pref_lockscreen_battery_arc";
@@ -704,7 +708,9 @@ public class GravityBoxSettings extends Activity implements GravityBoxResultRece
         private SwitchPreference mPrefLockscreenTW;
         private PreferenceScreen mPrefLockscreenTWsettings;
         private Preference mPrefLockscreenTWadd;
-        private Preference mPrefLockscreenTWaddmanual;
+        private EditTextPreference mPrefLockscreenTWaddmanual;
+        private PreferenceCategory mPrefCatLockscreenTWmanage;
+        private Preference mPrefLockscreenTWclear;
         private static WifiManagerWrapper mWifiManager;
         private PreferenceScreen mPrefCatHwKeyActions;
         private PreferenceCategory mPrefCatHwKeyMenu;
@@ -809,11 +815,14 @@ public class GravityBoxSettings extends Activity implements GravityBoxResultRece
         private PreferenceCategory mPrefCatLsOther;
         private CheckBoxPreference mPrefLsRingTorch;
 
+        Context mContext;
+        
         @SuppressWarnings("deprecation")
         @Override
         public void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
-
+            
+            mContext = this.getActivity();
             // this is important because although the handler classes that read these settings
             // are in the same package, they are executed in the context of the hooked package
             getPreferenceManager().setSharedPreferencesMode(Context.MODE_WORLD_READABLE);
@@ -870,8 +879,68 @@ public class GravityBoxSettings extends Activity implements GravityBoxResultRece
             mPrefLockscreenTWadd =
             		(Preference) findPreference(PREF_LOCKSCREEN_TRUSTED_WIFI_SETTINGS_ADD);
             mPrefLockscreenTWaddmanual =
-            		(Preference) findPreference(PREF_LOCKSCREEN_TRUSTED_WIFI_SETTINGS_ADD_MANUAL);
+            		(EditTextPreference) findPreference(PREF_LOCKSCREEN_TRUSTED_WIFI_SETTINGS_ADD_MANUAL);
+            mPrefCatLockscreenTWmanage =
+            		(PreferenceCategory) findPreference(PREF_LOCKSCREEN_TRUSTED_WIFI_MANAGE);
+            mPrefLockscreenTWclear =
+            		(Preference) findPreference(PREF_LOCKSCREEN_TRUSTED_WIFI_CLEAR);
+            
+            //Next popualte list from wifi ssids
+            //mPrefLockscreenTWmanage.addPreference(mPrefLockscreenTWaddmanual);
+            
+            mPrefLockscreenTWsettings.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
 
+				@Override
+				public boolean onPreferenceClick(Preference preference) {
+					mPrefLockscreenTWsettings.removeAll();
+					mPrefLockscreenTWsettings.addPreference(mPrefLockscreenTWadd);
+					mPrefLockscreenTWsettings.addPreference(mPrefLockscreenTWaddmanual);
+					mPrefLockscreenTWsettings.addPreference(mPrefLockscreenTWclear);
+					mPrefLockscreenTWsettings.addPreference(mPrefCatLockscreenTWmanage);
+					String[] list = (String[]) mPrefs.getStringSet(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS, new HashSet<String>()).toArray(new String[0]);
+					for(int i = 0; i < list.length; ++i){
+						Preference _preference = new Preference(mContext);
+						_preference.setKey(list[i]);
+						_preference.setTitle(list[i]);
+						_preference.setOrder(i + 5);
+						_preference.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+
+							@Override
+							public boolean onPreferenceClick(Preference preference) {
+								Set<String> list = mPrefs.getStringSet(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS, new HashSet<String>());
+								Object string = "Don't steal our wifi please";
+								for (String network : list) {
+									if (network.equals(preference.getTitle())){
+										list.remove(network);
+									}
+								}
+								
+								SharedPreferences.Editor editor = mPrefs.edit();
+					    		editor.remove(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS);
+					    		editor.commit();
+					    		editor.putStringSet(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS, list);
+					    		editor.commit();
+					    		mPrefLockscreenTWsettings.removePreference(preference);
+								return false;
+							}
+						});
+						mPrefLockscreenTWsettings.addPreference(_preference);
+					}
+					return true;
+				}
+            	
+            });
+            
+            mPrefLockscreenTWaddmanual.setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
+				
+				@Override
+				public boolean onPreferenceChange(Preference preference, Object newValue) {
+					addTWmanual();
+					mPrefLockscreenTWaddmanual.setText("");
+					return false;
+				}
+			});
+                        
             wallpaperImage = new File(getActivity().getFilesDir() + "/lockwallpaper"); 
             wallpaperTemporary = new File(getActivity().getCacheDir() + "/lockwallpaper.tmp");
             notifBgImagePortrait = new File(getActivity().getFilesDir() + "/notifwallpaper");
@@ -1812,8 +1881,8 @@ public class GravityBoxSettings extends Activity implements GravityBoxResultRece
             } else if (pref == mPrefLockscreenTWadd) {
             	addTW();
             	return true;
-            } else if (pref == mPrefLockscreenTWaddmanual) {
-            	addTWmanual();
+            } else if (pref == mPrefLockscreenTWclear) {
+            	clearTW();
             	return true;
             } else if (pref == mPrefGbThemeDark) {
                 File file = new File(getActivity().getFilesDir() + "/" + FILE_THEME_DARK_FLAG);
@@ -1884,7 +1953,12 @@ public class GravityBoxSettings extends Activity implements GravityBoxResultRece
             return super.onPreferenceTreeClick(prefScreen, pref);
         }
 
-        public void addTWmanual() {
+        public void clearTW() {
+        	mPrefLockscreenTWsettings.removeAll();
+			mPrefLockscreenTWsettings.addPreference(mPrefLockscreenTWadd);
+			mPrefLockscreenTWsettings.addPreference(mPrefLockscreenTWaddmanual);
+			mPrefLockscreenTWsettings.addPreference(mPrefLockscreenTWclear);
+			mPrefLockscreenTWsettings.addPreference(mPrefCatLockscreenTWmanage);
         	SharedPreferences.Editor editor = mPrefs.edit();
     		editor.remove(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS);
     		editor.commit();
@@ -1892,22 +1966,87 @@ public class GravityBoxSettings extends Activity implements GravityBoxResultRece
 
     	public void addTW() {
     		mWifiManager = new WifiManagerWrapper(getActivity());
-    		if(mWifiManager.getWifiSsid() != "<unknown ssid>") {
+    		String SSID = mWifiManager.getWifiSsid();
+    		if(SSID != "<unknown ssid>") {
     		Set<String> networks = mPrefs.getStringSet(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS, new HashSet<String>());
     		HashSet<String> _networks = new HashSet<String>();
     		_networks.addAll(networks);
     		
-    		
-    		Log.d("ADJ", "addTW1 stringSet: " + networks);
-    		
-    		_networks.add(mWifiManager.getWifiSsid());
+    		_networks.add(SSID);
     		SharedPreferences.Editor editor = mPrefs.edit();
     		editor.remove(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS);
     		editor.commit();
     		editor.putStringSet(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS, _networks);
     		editor.commit();
-    		Log.d("ADJ", "addTW2 stringSet: " + networks);
+    		Preference _preference = new Preference(mContext);
+			_preference.setKey(SSID);
+			_preference.setTitle(SSID);
+			_preference.setOrder(_networks.size() + 5);
+			_preference.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+
+				@Override
+				public boolean onPreferenceClick(Preference preference) {
+					Set<String> list = mPrefs.getStringSet(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS, new HashSet<String>());
+					for (String network : list) {
+						if (network.equals(preference.getTitle())){
+							list.remove(network);
+						}
+					}
+					SharedPreferences.Editor editor = mPrefs.edit();
+		    		editor.remove(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS);
+		    		editor.commit();
+		    		editor.putStringSet(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS, list);
+		    		editor.commit();
+		    		mPrefLockscreenTWsettings.removePreference(preference);
+					return false;
+				}
+				
+			});
+			mPrefLockscreenTWsettings.addPreference(_preference);
     		}
+    	}
+    	
+    	public void addTWmanual(){
+    		EditText SSIDeditText = mPrefLockscreenTWaddmanual.getEditText();
+    		String SSID = SSIDeditText.getText().toString();
+    		if(SSID != "") {
+        		Set<String> networks = mPrefs.getStringSet(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS, new HashSet<String>());
+        		HashSet<String> _networks = new HashSet<String>();
+        		_networks.addAll(networks);
+        		if(!_networks.contains(SSID)) {
+        			_networks.add(SSID);
+        			SharedPreferences.Editor editor = mPrefs.edit();
+        			editor.remove(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS);
+        			editor.commit();
+        			editor.putStringSet(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS, _networks);
+        			editor.commit();
+        			Preference _preference = new Preference(mContext);
+        			_preference.setKey(SSID);
+        			_preference.setTitle(SSID);
+        			_preference.setOrder(_networks.size() + 5);
+        			_preference.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+	
+        				@Override
+        				public boolean onPreferenceClick(Preference preference) {
+        					Set<String> list = mPrefs.getStringSet(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS, new HashSet<String>());
+        					for (String network : list) {
+        						if (network.equals(preference.getTitle())){
+        							list.remove(network);
+        						}	
+        					}
+        					SharedPreferences.Editor editor = mPrefs.edit();
+        					editor.remove(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS);
+        					editor.commit();
+        					editor.putStringSet(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS, list);
+        					editor.commit();
+        					mPrefLockscreenTWsettings.removePreference(preference);
+        					return false;
+        				}
+        				
+        			});
+        			mPrefLockscreenTWsettings.addPreference(_preference);
+        		}
+        	}
     	}
         
         @SuppressWarnings("deprecation")

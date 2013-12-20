@@ -117,20 +117,30 @@
                 android:order="1" />
 
 		    <PreferenceScreen 
-            android:key="pref_cat_lockscreen_trusted_wifi_settings"
-            android:title="@string/pref_cat_lockscreen_trusted_wifi_settings_title"
-            android:order="2">
+            	android:key="pref_cat_lockscreen_trusted_wifi_settings"
+            	android:title="@string/pref_cat_lockscreen_trusted_wifi_settings_title"
+            	android:order="2">
 		    	
 		    	<Preference
-                android:key="pref_lockscreen_trusted_wifi_add"
-                android:summary="@string/pref_lockscreen_trusted_wifi_add_title"
-                android:order="1" />
+                	android:key="pref_lockscreen_trusted_wifi_add"
+                	android:summary="@string/pref_lockscreen_trusted_wifi_add_title"
+                	android:order="1" />
 		    	
 		    	<Preference
-            	android:summary="@string/pref_lockscreen_trusted_wifi_add_manual_title"
-            	android:key="pref_lockscreen_trusted_wifi_add_manual"
-            	android:order="2"/>
+            		android:summary="@string/pref_lockscreen_trusted_wifi_clear_title"
+            		android:key="pref_lockscreen_trusted_wifi_clear"
+            		android:order="3"/>
 		    	
+		    	<EditTextPreference
+		    	    android:summary="@string/pref_lockscreen_trusted_wifi_add_manual_title"
+		    	    android:key="pref_lockscreen_trusted_wifi_add_manual"
+		    	    android:order="2"/>
+		    	
+		    	<PreferenceCategory
+		    		android:title="@string/pref_cat_lockscreen_trusted_wifi_manage"
+		    		android:key="pref_lockscreen_trusted_wifi_manage"
+		    		android:order="4"/>
+		    
 		    </PreferenceScreen>
 		        
         </PreferenceCategory>
