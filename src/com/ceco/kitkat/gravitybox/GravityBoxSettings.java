@@ -2008,7 +2008,7 @@ public class GravityBoxSettings extends Activity implements GravityBoxResultRece
     	
     	public void addTWmanual(){
     		EditText SSIDeditText = mPrefLockscreenTWaddmanual.getEditText();
-    		String SSID = SSIDeditText.getText().toString();
+    		String SSID = "\"" + SSIDeditText.getText().toString() + "\"";
     		if(SSID != "") {
         		Set<String> networks = mPrefs.getStringSet(PREF_LOCKSCREEN_TRUSTED_WIFI_NETWORKS, new HashSet<String>());
         		HashSet<String> _networks = new HashSet<String>();
